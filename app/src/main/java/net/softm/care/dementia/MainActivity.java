@@ -11,6 +11,7 @@ import android.os.Bundle;
 import android.webkit.*;
 import android.view.View;
 import android.widget.*;
+import softm.hannun.update.HannunInAppUpdateManager;
 
 public class MainActivity extends Activity {
     private WebView web;
@@ -21,10 +22,12 @@ public class MainActivity extends Activity {
     private GeolocationPermissions.Callback locationCallback;
     private String locationOrigin;
     private boolean locationPermissionRequested;
+    private HannunInAppUpdateManager appUpdater;
     private static final String HOME = "https://dementia.designboard.net/";
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        appUpdater = new HannunInAppUpdateManager(this, null);
         locationPermissionRequested = state != null && state.getBoolean("locationPermissionRequested");
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -130,9 +133,14 @@ public class MainActivity extends Activity {
         exitDialog.show();
     }
     @Override protected void onSaveInstanceState(Bundle state) { state.putBoolean("locationPermissionRequested", locationPermissionRequested); web.saveState(state); super.onSaveInstanceState(state); }
-    @Override protected void onPause() { web.onPause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); if (web != null) web.onResume(); }
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (appUpdater.onActivityResult(requestCode, resultCode)) return;
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+    @Override protected void onPause() { appUpdater.onPause(); web.onPause(); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); appUpdater.onResume(); if (web != null) web.onResume(); }
     @Override protected void onDestroy() {
+        appUpdater.destroy();
         if (locationCallback != null) locationCallback.invoke(locationOrigin, false, false);
         if (exitDialog != null) { exitDialog.setOnDismissListener(null); exitDialog.dismiss(); }
         googleAds.destroy();
