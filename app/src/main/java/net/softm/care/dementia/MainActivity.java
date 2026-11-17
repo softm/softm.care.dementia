@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
                 error.setVisibility(View.GONE); web.setVisibility(View.VISIBLE); progress.setVisibility(View.VISIBLE);
             }
             @Override public void onPageFinished(WebView view, String url) {
+                view.getSettings().setCacheMode(WebSettings.LOAD_DEFAULT);
                 progress.setVisibility(View.GONE);
             }
             @Override public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError failure) {
@@ -114,7 +115,12 @@ public class MainActivity extends Activity {
         return true;
     }
     private void showError() { error.setVisibility(View.VISIBLE); web.setVisibility(View.GONE); progress.setVisibility(View.GONE); }
-    private void retry() { String url = web.getUrl(); web.loadUrl(url != null && trusted(Uri.parse(url)) ? url : HOME); }
+    private void retry() {
+        String url = web.getUrl();
+        web.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE);
+        web.loadUrl(url != null && trusted(Uri.parse(url)) ? url : HOME,
+            java.util.Collections.singletonMap("Cache-Control", "no-cache"));
+    }
     @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(code, permissions, results);
         if (code == 10 && locationCallback != null) {
@@ -125,20 +131,16 @@ public class MainActivity extends Activity {
         }
     }
     @Override public void onBackPressed() {
-        if (exitDialog != null && exitDialog.isShowing()) return;
         if (web.canGoBack()) { web.goBack(); return; }
-        exitDialog = ExitConfirmation.create(this, googleAds.canRequestExitAd());
-        exitDialog.setCanceledOnTouchOutside(false);
-        exitDialog.setOnDismissListener(dialog -> exitDialog = null);
-        exitDialog.show();
+        googleAds.showExitConfirmation();
     }
     @Override protected void onSaveInstanceState(Bundle state) { state.putBoolean("locationPermissionRequested", locationPermissionRequested); web.saveState(state); super.onSaveInstanceState(state); }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (appUpdater.onActivityResult(requestCode, resultCode)) return;
         super.onActivityResult(requestCode, resultCode, data);
     }
-    @Override protected void onPause() { appUpdater.onPause(); web.onPause(); super.onPause(); }
-    @Override protected void onResume() { super.onResume(); appUpdater.onResume(); if (web != null) web.onResume(); }
+    @Override protected void onPause() { googleAds.onPause(); appUpdater.onPause(); web.onPause(); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); appUpdater.onResume(); if (web != null) web.onResume(); googleAds.onResume(); }
     @Override protected void onDestroy() {
         appUpdater.destroy();
         if (locationCallback != null) locationCallback.invoke(locationOrigin, false, false);
