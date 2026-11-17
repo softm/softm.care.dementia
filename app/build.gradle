@@ -58,5 +58,6 @@ tasks.configureEach { task ->
 
 // 돌봄한눈과 같은 SDK 버전으로 세 광고 형식의 동작을 일치시킵니다.
 dependencies {
+    implementation 'com.github.softm:hannun-in-app-update-android:1.0.0'
     implementation 'com.google.android.gms:play-services-ads:23.6.0'
 }
