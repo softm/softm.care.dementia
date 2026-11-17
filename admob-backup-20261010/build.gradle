@@ -1,0 +1,46 @@
+apply plugin: 'com.android.application'
+def releaseSigning = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (signingFile.exists()) {
+    signingFile.withInputStream { releaseSigning.load(it) }
+}
+android {
+    namespace 'net.softm.care.dementia'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'net.softm.care.dementia'
+        minSdk 23
+        targetSdk 36
+        versionCode 2
+        versionName '1.0.0'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile rootProject.file(releaseSigning.getProperty('storeFile'))
+                storePassword releaseSigning.getProperty('storePassword')
+                keyAlias releaseSigning.getProperty('keyAlias')
+                keyPassword releaseSigning.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+// 서명 설정 누락 시 미서명 산출물을 배포하지 않도록 중단합니다.
+tasks.configureEach { task ->
+    if (task.name == 'validateSigningRelease') {
+        task.doFirst {
+            if (!signingFile.exists()) throw new GradleException('signing.properties 파일이 필요합니다.')
+            ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { key ->
+                if (!releaseSigning.getProperty(key)) throw new GradleException('서명 설정 누락: ' + key)
+            }
+        }
+    }
+}

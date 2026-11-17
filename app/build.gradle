@@ -1,0 +1,62 @@
+apply plugin: 'com.android.application'
+def releaseSigning = new Properties()
+def signingFile = rootProject.file('signing.properties')
+if (signingFile.exists()) {
+    signingFile.withInputStream { releaseSigning.load(it) }
+}
+android {
+    namespace 'net.softm.care.dementia'
+    compileSdk 36
+    defaultConfig {
+        applicationId 'net.softm.care.dementia'
+        minSdk 24
+        targetSdk 36
+        versionCode 5
+        versionName '1.0.3'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
+    signingConfigs {
+        release {
+            if (signingFile.exists()) {
+                storeFile rootProject.file(releaseSigning.getProperty('storeFile'))
+                storePassword releaseSigning.getProperty('storePassword')
+                keyAlias releaseSigning.getProperty('keyAlias')
+                keyPassword releaseSigning.getProperty('keyPassword')
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            resValue 'string', 'admob_app_id', 'ca-app-pub-3940256099942544~3347511713'
+            resValue 'string', 'admob_native_ad_unit_id', 'ca-app-pub-3940256099942544/2247696110'
+            resValue 'string', 'admob_interstitial_ad_unit_id', 'ca-app-pub-3940256099942544/1033173712'
+            resValue 'string', 'admob_exit_banner_ad_unit_id', 'ca-app-pub-3940256099942544/6300978111'
+        }
+        release {
+            resValue 'string', 'admob_app_id', 'ca-app-pub-4219853075548260~8975001063'
+            resValue 'string', 'admob_native_ad_unit_id', 'ca-app-pub-4219853075548260/6570511223'
+            resValue 'string', 'admob_interstitial_ad_unit_id', 'ca-app-pub-4219853075548260/3799123636'
+            resValue 'string', 'admob_exit_banner_ad_unit_id', 'ca-app-pub-4219853075548260/9053134520'
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+// 서명 설정 누락 시 미서명 산출물을 배포하지 않도록 중단합니다.
+tasks.configureEach { task ->
+    if (task.name == 'validateSigningRelease') {
+        task.doFirst {
+            if (!signingFile.exists()) throw new GradleException('signing.properties 파일이 필요합니다.')
+            ['storeFile', 'storePassword', 'keyAlias', 'keyPassword'].each { key ->
+                if (!releaseSigning.getProperty(key)) throw new GradleException('서명 설정 누락: ' + key)
+            }
+        }
+    }
+}
+
+// 돌봄한눈과 같은 SDK 버전으로 세 광고 형식의 동작을 일치시킵니다.
+dependencies {
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+}
